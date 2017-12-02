@@ -40,13 +40,20 @@ class Templer
     }
     public function Render(){
         $this->interpret_vars();
+        echo $this->file_interpreted;
     }
     public function interpret_vars(){
         $rule = "{$this->open_tag}\s*{$this->var_sym}{$this->var_rule}{$this->close_tag}";
-        echo $rule;
         $this->file_interpreted = preg_replace_callback("/{$rule}/",function($m){
             $var = @$this->data[$m[1]];
-            if(!$var){
+            if (preg_match("/\./",$m[1])){
+                $break_w = explode(".",$m[1]);
+                $root = $this->data[$break_w[0]];
+                for($i = 1;$i < count($break_w);$i++){
+                    $root = $root[$break_w[$i]];
+                }
+                return $root;
+            }elseif(!$var){
                 throw new \Exception("Error: Undefined variable name \"{$m[0]}\"");
             }else{
               return $var;
