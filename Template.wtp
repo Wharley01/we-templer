@@ -2,7 +2,11 @@
 <html>
 <title>[%title]</title>
 <body>
-[%body]
+[%var = adewale][%school = Mahnumd]
+<br>
+[%var2 = my name is `%var`, I went to `%school`]
+[%body.text]
+[%var2]
 </body>
 
 </html>
