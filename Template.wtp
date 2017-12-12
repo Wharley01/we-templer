@@ -2,11 +2,20 @@
 <html>
 <title>[%title]</title>
 <body>
-[%var = adewale][%school = Mahnumd]
+[%var = adewale]
+[%school = Mahnumd]
 <br>
 [%var2 = my name is `%var`, I went to `%school`]
 [%body.text]
 [%var2]
+
+[if {`%var1` = "adewale"} AND {"name" = "name"} OR {`%var2` = `%var1`}]
+
+<div>
+    I should display
+</div>
+
+[/if]
 </body>
 
 </html>
