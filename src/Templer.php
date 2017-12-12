@@ -7,97 +7,135 @@
  *
  */
 
-namespace We;
 
 
-class Templer
-{
-    public $file;
-    public $data = [];
-    public $file_raw_content;
-    public $file_interpreted;
-    public $open_tag = "\[";
-    public $close_tag = "\]";
-    public $var_sym = "\%";
-    public $var_rule = "([\w.]*)";
-    public function __construct($file)
+namespace We {
+
+    require_once "tools.php";
+    class Templer
     {
-        $this->file = $file;
-        $raw = file_get_contents($file);
-        $this->file_raw_content = $raw;
-        $this->file_interpreted = $raw;
-        return $this;
-    }
-    public function bind($data){
-        if(!$this->data){
-        $this->data = $data;
-        }else{
-            foreach ($data as $key => $val){
-                $this->data[$key] = $val;
-            }
+        public $file;
+        public $data = [];
+        public $file_raw_content;
+        public $file_interpreted;
+        public $open_tag = "\[";
+        public $close_tag = "\]";
+        public $var_sym = "\%";
+        public $var_rule = "([\w.]*)";
+        public function __construct($file)
+        {
+            $this->file = $file;
+            $raw = file_get_contents($file);
+            $this->file_raw_content = $raw;
+            $this->file_interpreted = $raw;
+            return $this;
         }
-        return $this;
-    }
-    public function Render(){
-        $this->replace_all_vars();
-        echo $this->file_interpreted;
-    }
-    public function interpret_vars($raw){
-        $rule = "{$this->open_tag}\s*{$this->var_sym}{$this->var_rule}{$this->close_tag}";
-        $file_interpreted = $raw;
-        $file_interpreted = preg_replace_callback("/{$rule}/",function($m){
-            $var = @$this->data[$m[1]];
-            if (preg_match("/\./",$m[1])){
-                $break_w = explode(".",$m[1]);
-                $root = $this->data[$break_w[0]];
-                for($i = 1;$i < count($break_w);$i++){
-                    if(!@$root[$break_w[$i]]){
-                        throw new \Exception("Error: Undefined index '{$break_w[$i]}' in '{$break_w[$i-1]}'");
-                    }
-                    $root = $root[$break_w[$i]];
-                }
-
-                return $root;
-            }elseif(!$var){
-                throw new \Exception("Error: Undefined variable name \"{$m[0]}\"");
+        public function bind($data){
+            if(!$this->data){
+                $this->data = $data;
             }else{
-
-              return $var;
+                foreach ($data as $key => $val){
+                    $this->data[$key] = $val;
+                }
             }
-        },$file_interpreted);
+            return $this;
+        }
+        public function Render(){
+//            clean();
+            $this->replace_all_vars();
+            $this->interpret_conditional_statement();
+            echo $this->file_interpreted;
+        }
+        public function interpret_vars($raw){
+            $rule = "{$this->open_tag}\s*{$this->var_sym}{$this->var_rule}{$this->close_tag}";
+            $file_interpreted = $raw;
+            $file_interpreted = preg_replace_callback("/{$rule}/",function($m){
+                $var = @$this->data[$m[1]];
+                if (preg_match("/\./",$m[1])){
+                    $break_w = explode(".",$m[1]);
+                    $root = $this->data[$break_w[0]];
+                    for($i = 1;$i < count($break_w);$i++){
+                        if(!@$root[$break_w[$i]]){
+                            throw new \Exception("Error: Undefined index '{$break_w[$i]}' in '{$break_w[$i-1]}'");
+                        }
+                        $root = $root[$break_w[$i]];
+                    }
 
-        return $file_interpreted;
-    }
+                    return $root;
+                }elseif(!$var){
+                    throw new \Exception("Error: Undefined variable name \"{$m[0]}\"");
+                }else{
 
-    public function assign_vars(){
-        $rule = "{$this->open_tag}\s*{$this->var_sym}{$this->var_rule}\s*=\s*([^]]*)\s*{$this->close_tag}";
+                    return $var;
+                }
+            },$file_interpreted);
 
-        $this->file_interpreted = preg_replace_callback("/{$rule}/",function($m){
+            return $file_interpreted;
+        }
+
+        public function assign_vars(){
+            $rule = "{$this->open_tag}\s*{$this->var_sym}{$this->var_rule}\s*=\s*([^]]*)\s*{$this->close_tag}";
+
+            $this->file_interpreted = preg_replace_callback("/{$rule}/",function($m){
+
+                $content = $this->strip_in_string_vars($m[2]);
+                $interpret = $this->interpret_vars($content);
+                $this->data[$m[1]] = $interpret;
+                return "";
+            },$this->file_interpreted);
+        }
+        public function replace_all_vars(){
+            $this->assign_vars();
+            $this->file_interpreted = $this->interpret_vars($this->file_interpreted);
+        }
+        public function strip_in_string_vars($string){
             $rule = "\`{$this->var_sym}{$this->var_rule}\`";
-            $content = $m[2];
+            $content = $string;
             $content = preg_replace_callback("/{$rule}/",function($r){
 
                 $return = "{$this->open_tag}{$this->var_sym}{$r[1]}{$this->close_tag}";
                 return str_replace("\\","",$return);
             },$content);//convert in-text variable to real one
-            $interpret = $this->interpret_vars($content);
-            $this->data[$m[1]] = $interpret;
-            return "";
-        },$this->file_interpreted);
-    }
-    public function replace_all_vars(){
-        $this->assign_vars();
-        $this->file_interpreted = $this->interpret_vars($this->file_interpreted);
-    }
-    public function interpret_conditional_statement(){
-        return $this->file_interpreted;
-    }
-    public function interpret_loops(){
-        return $this->file_interpreted;
-    }
-    public function interpret_include_file(){
-        return $this->file_interpreted;
-    }
+            return $content;
+        }
+        public function interpret_conditional_statement(){
+            //method to interpret a conditional statement
+            //find if statement
+            $rule = "{$this->open_tag}if\s*\{(.*)}{$this->close_tag}\s*\n*([\w\n\W]*){$this->open_tag}\/if{$this->close_tag}";
+            $rule = preg_replace("/\n/","\\n",$rule);
+            $this->file_interpreted = preg_replace_callback("/{$rule}/",function($m){
+                //now breake the conditions
+                $bc = preg_split("/}\s*(AND|OR)\s*{/",$m[1],-1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+                $cd = [];
+                $bl = [];
+                $lo = array(
+                    "AND",
+                    "OR",
+                    "||",
+                    "&&"
+                );//accpted logical operators
+                for ($i = 0; $i < count($bc); $i++){//re
+                    if(in_array($bc[$i],$lo)){
+                        $bl[] = $bc[$i];
+                    }else{// check if condition is true
+
+                        $cd[] = $bc[$i];
+                    }
+                }
+
+                print_r($bc);
+
+            },$this->file_interpreted);
+
+            return $this->file_interpreted;
+        }
+        public function interpret_loops(){
+            return $this->file_interpreted;
+        }
+        public function interpret_include_file(){
+            return $this->file_interpreted;
+        }
 
 
+    }
 }
