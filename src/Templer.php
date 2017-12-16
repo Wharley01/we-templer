@@ -72,8 +72,37 @@ namespace We {
 
             return $file_interpreted;
         }
+public  function get_var_val($var){
 
-        public function assign_vars(){
+    if (preg_match("/\./",$var)){
+        $break_w = explode(".",$var);
+        $root = $this->data[$break_w[0]];
+        for($i = 1;$i < count($break_w);$i++){
+            if(!@$root[$break_w[$i]]){
+                throw new \Exception("Error: Undefined index '{$break_w[$i]}' in '{$break_w[$i-1]}'");
+            }
+            $root = $root[$break_w[$i]];
+        }
+        //echo $root;
+        return $root;
+    }elseif(!$this->data[$var]){
+        throw new \Exception("Error: Undefined variable name \"{$this->data[$var]}\"");
+    }else{
+        //echo $this->data[$var];
+        return $this->data[$var];
+    }
+}
+public function inline_variabe_replace($string){
+    $rule = "\`{$this->var_sym}{$this->var_rule}\`";
+    $return = $string;
+            $return = preg_replace_callback("/{$rule}/",function($matches){
+
+                return $this->get_var_val($matches[1]);
+            },$return);
+            //echo $return;
+            return $return;
+        }
+ public function assign_vars(){
             $rule = "{$this->open_tag}\s*{$this->var_sym}{$this->var_rule}\s*=\s*([^]]*)\s*{$this->close_tag}";
 
             $this->file_interpreted = preg_replace_callback("/{$rule}/",function($m){
@@ -118,12 +147,30 @@ namespace We {
                     if(in_array($bc[$i],$lo)){
                         $bl[] = $bc[$i];
                     }else{// check if condition is true
+                       // echo $bc[$i].PHP_EOL;
+        $data_rule = "((\"|'|`)(.*)(\"|'|`)|(\d+\.\d+)|(\d+)|true|false|TRUE|FALSE)\s*(=|==|[<>]+)\s*((\"|'|`)(.*)(\"|'|`)|(\d+\.\d+)|(\d+)|true|false|TRUE|FALSE)";
 
-                        $cd[] = $bc[$i];
+            if(preg_match("/^{$data_rule}$/",$bc[$i],$matches)){
+
+                $left_val = $this->inline_variabe_replace($matches[1]);
+
+                $left_val = data_type_test($left_val);
+
+                $right_val = $this->inline_variabe_replace($matches[8]);
+                $right_val = data_type_test($right_val);
+
+
+
+                echo PHP_EOL."LEFT: ".$left_val."RIGHT: ".$right_val.PHP_EOL;
+
+                    //print_r($matches);
+
+
+            }
                     }
                 }
 
-                print_r($bc);
+                //print_r($bc);
 
             },$this->file_interpreted);
 

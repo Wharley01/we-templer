@@ -24,7 +24,7 @@ function boolTest($bools,$logic){
 }
 function data_type_test($data){
         if(preg_match('/^("|\')(.*)("|\')$/',$data,$string)){
-            echo "Datatype: String";
+          //  echo "Datatype: String";
 
             if($string[1] == "\""){
                return str_replace('"','\"',$string[2]);
@@ -32,18 +32,26 @@ function data_type_test($data){
                 return str_replace("'","\'",$string[2]);
             }
         }elseif(preg_match('/^(\d*)$/',$data,$integer)){
-            echo "Datatype: integer";
+//            echo "Datatype: integer";
             return $integer[1];
 
 
         }elseif(preg_match('/^(\d*\.\d*)$/',$data,$float)){
-            echo "Datatype: Floating point number";
+//            echo "Datatype: Floating point number";
             return $float[1];
 
+        }elseif(preg_match("/^`%([\w.]*)`$/",$data,$var)){
+        return $data;
         }else{
-            echo "Invalid data type";
+            return  $data;
         }
         return false;
 }
-print_r(data_type_test(23.45));
+function is_variabe($string){
+        if(preg_match("/`%([\w.]*)`/",$string,$matches)){
+            return $matches[1];
+        }
+        return false;
+}
+///print_r(data_type_test(23.45));
 ?>

@@ -9,10 +9,10 @@
 [%body.text]
 [%var2]
 
-[if {`%var1` = "adewale"} AND {"name" = "name"} OR {`%var2` = `%var1`}]
+[if {`%var` > "name"} AND {3 > 5.7} OR {`%var2` == "ade and `%var2`"}]
 
 <div>
-    I should display
+    This wil show
 </div>
 
 [/if]
